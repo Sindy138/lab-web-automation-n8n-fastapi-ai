@@ -1,0 +1,113 @@
+{
+  "name": "Workflow 3 - Informe Diario Programado",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "w3-node-01",
+      "name": "Schedule 9:00 Diario",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:8000/tareas",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "completada",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w3-node-02",
+      "name": "Obtener Tareas Pendientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const tareas = $input.all().map(i => i.json);\nconst porPrioridad = tareas.reduce((acc, t) => {\n  acc[t.prioridad] = (acc[t.prioridad] || 0) + 1;\n  return acc;\n}, {});\nreturn [{ json: { total: tareas.length, porPrioridad } }];"
+      },
+      "id": "w3-node-03",
+      "name": "Agrupar por Prioridad",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/chat",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "=Genera un informe diario ejecutivo en 3 párrafos. Tareas pendientes: {{ $json.total }}. Por prioridad: {{ JSON.stringify($json.porPrioridad) }}. Incluye una recomendación de acción concreta para el equipo."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w3-node-04",
+      "name": "Generar Informe IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst stats = $('Agrupar por Prioridad').first().json;\nconst entrada = {\n  fecha: new Date().toISOString(),\n  informe: $input.first().json.respuesta,\n  stats: { total: stats.total, porPrioridad: stats.porPrioridad }\n};\nfs.appendFileSync('informes.jsonl', JSON.stringify(entrada) + '\\n');\nreturn [{ json: { guardado: true, fecha: entrada.fecha, total_tareas: stats.total } }];"
+      },
+      "id": "w3-node-05",
+      "name": "Guardar Informe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 300]
+    }
+  ],
+  "connections": {
+    "Schedule 9:00 Diario": {
+      "main": [
+        [{ "node": "Obtener Tareas Pendientes", "type": "main", "index": 0 }]
+      ]
+    },
+    "Obtener Tareas Pendientes": {
+      "main": [
+        [{ "node": "Agrupar por Prioridad", "type": "main", "index": 0 }]
+      ]
+    },
+    "Agrupar por Prioridad": {
+      "main": [
+        [{ "node": "Generar Informe IA", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generar Informe IA": {
+      "main": [
+        [{ "node": "Guardar Informe", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

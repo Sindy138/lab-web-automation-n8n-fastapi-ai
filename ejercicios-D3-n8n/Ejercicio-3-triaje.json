@@ -1,0 +1,367 @@
+{
+  "name": "Ejercicio-3-triaje",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "soporte",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "99b5b58d-004f-41a8-a0f3-13b8e6edb2a2",
+      "name": "Webhook",
+      "webhookId": "ee0dbda1-9398-4ad5-b9c5-776678dad8f9"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/api/chat",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": \"Clasifica este problema en una sola palabra: TÉCNICO, FACTURACIÓN o GENERAL. Problema: {{ $json.body.descripcion }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "82a8a2e5-5f1e-4be4-9664-24a5697ae399",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const respuesta = $input.first().json.respuesta || \"\";\nconst clasificacion = respuesta.trim().toUpperCase();\nlet departamento = \"GENERAL\";\nif (clasificacion.includes(\"TÉCNICO\") || clasificacion.includes(\"TECNICO\")) {\n  departamento = \"TÉCNICO\";\n} else if (clasificacion.includes(\"FACTURACIÓN\") || clasificacion.includes(\"FACTURACION\")) {\n  departamento = \"FACTURACIÓN\";\n}\nreturn [{ json: { departamento, respuesta_ia: respuesta } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "883023aa-7f5e-4401-911d-090cb5754c14",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.departamento }}",
+                    "rightValue": "TÉCNICO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ca0a76c6-e907-45dc-b568-ece3d68fe4f1"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "225f106a-c209-4a25-8a46-6c5d3f328167",
+                    "leftValue": "={{ $json.departamento }}",
+                    "rightValue": "FACTURACIÓN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "48a81a3b-e35f-4d2f-80f2-f53bf857ef91",
+                    "leftValue": "={{ $json.departamento }}",
+                    "rightValue": "GENERAL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "658f22e0-b5a4-4bdb-8523-211e63aefa3d",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0b42e857-3606-4d67-a5f2-e8891d8f49ea",
+              "name": "departamento",
+              "value": "TÉCNICO",
+              "type": "string"
+            },
+            {
+              "id": "d8756787-5a09-4fa4-b244-0400f24a30ef",
+              "name": "ticket_id",
+              "value": "={{ $execution.id }}-{{ Date.now() }}",
+              "type": "string"
+            },
+            {
+              "id": "31de5240-d833-4c26-81a2-1c59d8e5edfe",
+              "name": "eta",
+              "value": "4 horas",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        848,
+        -112
+      ],
+      "id": "1946aa11-8b87-42f3-818f-216cf0a8f941",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ae2f8acb-468b-40ca-8849-771f07fe3694",
+              "name": "departamento",
+              "value": "FACTURACIÓN",
+              "type": "string"
+            },
+            {
+              "id": "2992c483-38ce-4333-a86d-df2b0ea0d044",
+              "name": "ticket_id",
+              "value": "={{ $execution.id }}-{{ Date.now() }}",
+              "type": "string"
+            },
+            {
+              "id": "36081df7-5507-4cb5-bcf8-6c1a898ac098",
+              "name": "eta",
+              "value": "24 horas",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        848,
+        48
+      ],
+      "id": "2c030820-6824-48af-9080-6b97df9abfc3",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "001edb5b-74ec-43f0-8fc1-76eee74731ac",
+              "name": "departamento",
+              "value": "GENERAL",
+              "type": "string"
+            },
+            {
+              "id": "6f8ddbb4-4e2c-4287-a8fd-ce91669df26e",
+              "name": "ticket_id",
+              "value": "={{ $execution.id }}-{{ Date.now() }}",
+              "type": "string"
+            },
+            {
+              "id": "f53f6c10-c9c4-446c-a0e1-1ca858edc055",
+              "name": "eta",
+              "value": "48 horas",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        848,
+        208
+      ],
+      "id": "238a7e44-b11c-452e-b4d6-c8e914d30361",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1184,
+        48
+      ],
+      "id": "e2df1a31-0381-4689-a6fb-5532d8771e75",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b31d0819-559e-45bf-8832-6984f83ec424",
+  "meta": {
+    "instanceId": "47dadd6ee1ecef63d7b55305fd991808ecc61575eb2cb6068aafc7bae92f1139"
+  },
+  "id": "vkQo5RdD065v8s8Y",
+  "tags": []
+}

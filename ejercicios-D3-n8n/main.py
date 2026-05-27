@@ -2,10 +2,9 @@ import os
 import uuid
 from typing import Optional
 
-import httpx
 from groq import Groq
 from dotenv import load_dotenv
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 load_dotenv()
@@ -15,9 +14,9 @@ app = FastAPI()
 tareas_db: list[dict] = []
 
 USUARIOS_MOCK = {
-    1:  {"id": 1,  "nombre": "Ana García",      "email": "ana@example.com",    "plan": "premium"},
-    2:  {"id": 2,  "nombre": "Luis Martínez",   "email": "luis@example.com",   "plan": "basic"},
-    42: {"id": 42, "nombre": "Carlos López",    "email": "carlos@example.com", "plan": "premium"},
+    1:  {"id": 1,  "nombre": "Ana García",    "email": "ana@example.com",    "plan": "premium"},
+    2:  {"id": 2,  "nombre": "Luis Martínez", "email": "luis@example.com",   "plan": "basic"},
+    42: {"id": 42, "nombre": "Carlos López",  "email": "carlos@example.com", "plan": "premium"},
 }
 
 
@@ -31,23 +30,8 @@ class ChatRequest(BaseModel):
     message: str
 
 
-# ---------- helpers ----------
-
-async def notificar_n8n(webhook_url: str, payload: dict):
-    """Llama al webhook de n8n en segundo plano; nunca bloquea la respuesta principal."""
-    if not webhook_url:
-        return
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(webhook_url, json=payload)
-    except Exception:
-        pass
-
-
-# ---------- endpoints ----------
-
 @app.post("/tareas", status_code=201)
-async def crear_tarea(tarea: TareaEntrada, background_tasks: BackgroundTasks):
+def crear_tarea(tarea: TareaEntrada):
     nueva = {
         "id": str(uuid.uuid4()),
         "titulo": tarea.titulo,
@@ -56,12 +40,7 @@ async def crear_tarea(tarea: TareaEntrada, background_tasks: BackgroundTasks):
         "completada": False,
     }
     tareas_db.append(nueva)
-    background_tasks.add_task(
-        notificar_n8n,
-        os.getenv("N8N_WEBHOOK_TAREAS", ""),
-        {"evento": "tarea_creada", "tarea": nueva},
-    )
-    return {"ok": True, "data": nueva}
+    return nueva
 
 
 @app.get("/tareas")
@@ -91,15 +70,3 @@ def chat(request: ChatRequest):
         messages=[{"role": "user", "content": request.message}],
     )
     return {"respuesta": completion.choices[0].message.content}
-
-
-@app.get("/health")
-async def health():
-    n8n_ok = False
-    try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            resp = await client.get("http://localhost:5678/healthz")
-            n8n_ok = resp.status_code < 500
-    except Exception:
-        pass
-    return {"status": "ok", "n8n_reachable": n8n_ok}

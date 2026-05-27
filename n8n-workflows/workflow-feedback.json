@@ -1,0 +1,267 @@
+{
+  "name": "Workflow 2 - Feedback con Análisis IA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "feedback",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "w2-node-01",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "w2-webhook-id-01"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'http://localhost:8000/usuarios/' + $json.usuario_id }}",
+        "options": {}
+      },
+      "id": "w2-node-02",
+      "name": "Obtener Usuario",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/chat",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "=Analiza este feedback de {{ $json.nombre }} (plan: {{ $json.plan }}): '{{ $('Webhook').item.json.mensaje }}' — Calificación: {{ $('Webhook').item.json.calificacion }}/5. Devuelve SOLO un JSON válido con esta estructura: { \"sentimiento\": \"positivo|negativo|neutro\", \"problema_principal\": \"descripción breve\", \"accion\": \"acción recomendada\" }"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w2-node-03",
+      "name": "Analizar con IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items.map(item => {\n  const respuesta = item.json.respuesta || '';\n  let parsed = {};\n  try {\n    const match = respuesta.match(/\\{[\\s\\S]*\\}/);\n    parsed = match ? JSON.parse(match[0]) : {};\n  } catch (e) {\n    parsed = {};\n  }\n  return {\n    json: {\n      sentimiento: parsed.sentimiento || 'neutro',\n      problema_principal: parsed.problema_principal || 'No identificado',\n      accion: parsed.accion || 'Revisar manualmente',\n      calificacion: $('Webhook').first().json.calificacion,\n      usuario_nombre: $('Obtener Usuario').first().json.nombre\n    }\n  };\n});"
+      },
+      "id": "w2-node-04",
+      "name": "Parsear Respuesta IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "w2-cond-01",
+              "leftValue": "={{ $json.calificacion }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "w2-node-05",
+      "name": "IF Calificacion Baja",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1160, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/tareas",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "titulo",
+              "value": "=Ticket feedback: {{ $json.problema_principal }}"
+            },
+            {
+              "name": "prioridad",
+              "value": "alta"
+            },
+            {
+              "name": "descripcion",
+              "value": "=Usuario: {{ $json.usuario_nombre }} | Cal: {{ $json.calificacion }}/5"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w2-node-06",
+      "name": "Crear Ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1400, 160]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "w2-asgn-01",
+              "name": "ticket_creado",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "w2-asgn-02",
+              "name": "sentimiento",
+              "value": "={{ $('Parsear Respuesta IA').item.json.sentimiento }}",
+              "type": "string"
+            },
+            {
+              "id": "w2-asgn-03",
+              "name": "tarea_id",
+              "value": "={{ $json.data.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w2-node-07",
+      "name": "Set Con Ticket",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1640, 160]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "w2-asgn-04",
+              "name": "ticket_creado",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "w2-asgn-05",
+              "name": "sentimiento",
+              "value": "={{ $json.sentimiento }}",
+              "type": "string"
+            },
+            {
+              "id": "w2-asgn-06",
+              "name": "tarea_id",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "w2-node-08",
+      "name": "Set Sin Ticket",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1400, 440]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "id": "w2-node-09",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1880, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, sentimiento: $json.sentimiento, ticket_creado: $json.ticket_creado, tarea_id: $json.tarea_id || null }) }}",
+        "options": {}
+      },
+      "id": "w2-node-10",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2120, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Obtener Usuario", "type": "main", "index": 0 }]
+      ]
+    },
+    "Obtener Usuario": {
+      "main": [
+        [{ "node": "Analizar con IA", "type": "main", "index": 0 }]
+      ]
+    },
+    "Analizar con IA": {
+      "main": [
+        [{ "node": "Parsear Respuesta IA", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parsear Respuesta IA": {
+      "main": [
+        [{ "node": "IF Calificacion Baja", "type": "main", "index": 0 }]
+      ]
+    },
+    "IF Calificacion Baja": {
+      "main": [
+        [{ "node": "Crear Ticket", "type": "main", "index": 0 }],
+        [{ "node": "Set Sin Ticket", "type": "main", "index": 0 }]
+      ]
+    },
+    "Crear Ticket": {
+      "main": [
+        [{ "node": "Set Con Ticket", "type": "main", "index": 0 }]
+      ]
+    },
+    "Set Con Ticket": {
+      "main": [
+        [{ "node": "Merge", "type": "main", "index": 0 }]
+      ]
+    },
+    "Set Sin Ticket": {
+      "main": [
+        [{ "node": "Merge", "type": "main", "index": 1 }]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [{ "node": "Responder", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

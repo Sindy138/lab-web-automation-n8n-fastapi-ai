@@ -1,0 +1,39 @@
+Ejercicio 1: Tu primer workflow
+
+Crea un workflow que:
+
+    Recibe POST /webhook/clima con { nombre, ciudad, temperatura }
+    Si temperatura > 25: responde { mensaje: "¡Hace calor en {ciudad}!" }
+    Si temperatura ≤ 25: responde { mensaje: "Tiempo agradable en {ciudad}" }
+    Siempre añade { timestamp: [fecha actual], procesado_por: "n8n" }
+
+Prueba con curl o Postman.
+Ejercicio 2: Webhook que llama a tu API
+
+Crea un workflow que:
+
+    Recibe POST /webhook/nueva-tarea con { titulo, prioridad }
+    Llama a POST http://localhost:8000/tareas con los datos
+    Si la respuesta es exitosa: devuelve { ok: true, tarea_id }
+    Si hay error: devuelve { ok: false, error: [mensaje] }
+
+Ejercicio 3: Triaje de soporte con IA
+
+Workflow que:
+
+    Recibe una descripción de problema por webhook
+    Llama al agente de IA (POST /api/chat) para clasificar: TÉCNICO / FACTURACIÓN / GENERAL
+    Usa Switch para dirigir a diferentes caminos (simulados con nodos Set)
+    Responde con { departamento, ticket_id: [UUID], eta: "X horas" }
+
+Ejercicio 4: Flujo feedback → análisis → acción
+
+Construye el workflow completo de feedback:
+
+    Webhook recibe { usuario_id, mensaje, calificacion }
+    Consulta los datos del usuario en la API
+    IA analiza el feedback (sentimiento + acción recomendada)
+    Si calificacion < 3: crea tarea con alta prioridad en la API
+    Responde con el análisis y la acción tomada
+
+Prueba con calificación 5 (no debe crear ticket) y calificación 2 (sí debe crear ticket).

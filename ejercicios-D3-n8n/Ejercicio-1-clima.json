@@ -1,0 +1,205 @@
+{
+  "name": "Ejercicio-1-clima",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clima",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "22a61736-8161-48a9-877c-03a2f7ef8502",
+      "name": "Webhook",
+      "webhookId": "0eaff8bc-0692-4070-a746-75409af71669"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "88f6784a-5147-458a-9673-0b6f2c28d2bb",
+              "leftValue": "={{ $json.body.temperatura }}",
+              "rightValue": 25,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f2ca75cf-3044-4bc8-9fad-c0dbc5b587a5",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e3d99770-ddfb-44fb-a3c9-6e48f4abc4b4",
+              "name": "mensaje",
+              "value": "=¡Hace calor en {{ $json.ciudad }}!",
+              "type": "string"
+            },
+            {
+              "id": "d7ac8a95-3f6c-49ae-8d0c-349ae3757c92",
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            },
+            {
+              "id": "5c534364-aa40-4ed3-9b4f-732632d2bb8c",
+              "name": "procesado_por",
+              "value": "n8n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        -96
+      ],
+      "id": "1c4610ae-0327-41f3-861f-6e7031c8d4fb",
+      "name": "Edit-File-True"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eb7fd7cf-9497-4439-95ea-7ad4bbbd60ea",
+              "name": "mensaje",
+              "value": "=Tiempo agradable en {{ $('Webhook').item.json.ciudad }}",
+              "type": "string"
+            },
+            {
+              "id": "b19d49b6-18a1-47e1-9e1a-96ae0749fa63",
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
+            },
+            {
+              "id": "03a8d74f-1222-43d6-9bef-7cc060b1fa2b",
+              "name": "procesado_por",
+              "value": "n8n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        96
+      ],
+      "id": "a353b345-9aa4-47d9-8f7f-f28850f8a389",
+      "name": "Edit-Fields-False"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        656,
+        16
+      ],
+      "id": "c5e7fe04-033c-4612-a1df-861b61707c0f",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit-File-True",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit-Fields-False",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit-Fields-False": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit-File-True": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "cc4951d6-484d-4981-9e3f-4dece7527cb7",
+  "meta": {
+    "instanceId": "47dadd6ee1ecef63d7b55305fd991808ecc61575eb2cb6068aafc7bae92f1139"
+  },
+  "id": "sAhpg0RG8DYKsS0L",
+  "tags": []
+}
